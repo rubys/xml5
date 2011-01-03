@@ -1,0 +1,38 @@
+PARSER TEST DOCUMENTATION
+
+There can be multiple tests per file. Each test must begin with a line that says
+"#data". All subsequent lines until "#errors" are the test data and must be
+passed to the system being tested unchanged, except with the final newline (on
+the last line) removed. Then there must be a line that says "#errors:". It must
+be followed by one line per parse error that a conformant checker would return.
+It doesn't matter what those lines are, the only thing that matters is that
+there be the right number of parse errors. Then there must be a line that says
+"#document", which must be followed by a dump of the tree of the parsed DOM.
+Each node must be represented by a single line. Each line must start with "| ",
+followed by two spaces per parent node that the node has before the root
+document node. The root document node doesn't have any space.
+
+ * Element nodes must be represented by a "<", then the tag name, then "> (",
+   then the element prefix, then ", ", then the element local name, then ", ",
+   then the element namespace and then ")".
+ * Attributes must be given, in source order, on subsequent nodes, as if they
+   were children of the element node. Attribute nodes must have the attribute
+   name, then an "=" sign, then the attribute value in double quotes (")
+   followed by a space, then "(", then the attribute prefix, then ", ", then
+   the attribute local name, then ", ", then the attribute namespace and then
+   ")".
+ * Text nodes must be the string, in double quotes. Newlines aren't escaped.
+ * Comments must be "<!-- " then the data then " -->".
+ * DOCTYPEs must be XXX
+
+
+EXAMPLE
+
+#data
+<test xmlns=x>TEST
+#errors
+Unexpected end of file.
+#document
+| <test> (, test, x)
+|   xmlns="x" (, xmlns, http://www.w3.org/2000/xmlns/)
+|   "TEST"

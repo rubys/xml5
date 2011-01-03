@@ -1,0 +1,6 @@
+This is a quick port of Anne van Kesteren's XML5 project[1] from Python to
+Ruby.  The version of the source that was ported is captured in the lib.py
+directory, and the Ruby source retains much of the original Python structure.
+The tests provided pass on both Ruby 1.8.7 and 1.9.2.
+
+[1] http://code.google.com/p/xml5/
