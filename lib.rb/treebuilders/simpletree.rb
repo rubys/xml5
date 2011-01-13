@@ -7,7 +7,7 @@ module SimpleTree
       @childNodes = []
     end
 
-    def __iter__
+    def each
       for node in @childNodes
         yield node
         for item in node
@@ -20,7 +20,7 @@ module SimpleTree
       return @name
     end
 
-    def toxml
+    def to_xml
       raise NotImplementedError
     end
 
@@ -61,10 +61,10 @@ module SimpleTree
       return "#document"
     end
 
-    def toxml(encoding="utf=8")
+    def to_xml(encoding="utf=8")
       result = ""
       for child in @childNodes
-        result += child.toxml()
+        result += child.to_xml()
       end
       return result.encode(encoding)
     end
@@ -98,11 +98,11 @@ module SimpleTree
       return "\"%s\"" % @value
     end
 
-    def toxml
+    def to_xml
       return escape(@value)
     end
 
-    alias :hilite :toxml
+    alias :hilite :to_xml
   end
 
   class Element < Node
@@ -150,7 +150,7 @@ module SimpleTree
       return "<?#{@name} #{@data}?>"
     end
 
-    def toxml
+    def to_xml
       return "<?#{@name} #{@data}?>"
     end
 
@@ -170,7 +170,7 @@ module SimpleTree
       return "<!-- %s -->" % @data
     end
 
-    def toxml
+    def to_xml
       return "<!--%s-->" % @data
     end
 
