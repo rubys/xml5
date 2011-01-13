@@ -89,9 +89,10 @@ Parser.prototype.parse_error = function(code, data) {
 }
 
 if(__filename == process.argv[1]) {
+	var HTML5 = require('html5');
 	var fs = require('fs');
 	var jsdom = require('jsdom');
-	var window = jsdom.jsdom(null, null, {parser: XML5}).createWindow()
+	var window = jsdom.jsdom(null, null, {parser: HTML5}).createWindow()
 	var parser = new XML5.Parser({document: window.document});
 	parser.parse(fs.createReadStream(process.argv[2], {flags: 'r'}));
 	parser.on('end', function() {
