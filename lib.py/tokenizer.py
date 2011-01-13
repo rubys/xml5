@@ -529,7 +529,7 @@ class XMLTokenizer(object):
             # XXX parse error
             self.state = self.states["data"]
         else:
-            self.tokenQueue.append({"type":"Characters", "data":
+            self.tokenQueue.append({"type":"Characters", "data":\
               data + self.stream.charsUntil("]")})
         return True
 
@@ -541,7 +541,7 @@ class XMLTokenizer(object):
             # XXX parse error
             self.state = self.states["data"]
         else:
-            self.tokenQueue.append({"type":"Characters", "data":
+            self.tokenQueue.append({"type":"Characters", "data":\
               "]" + data + self.stream.charsUntil("]")})
             # Consume the next character which is either a "]" or an EOF as
             # well so if there's a "]" directly after the "]" we go nicely to
@@ -703,8 +703,8 @@ class XMLTokenizer(object):
                     charStack.append(data)
                     if data != EOF:
                         if "".join(charStack) == "NOTATION":
-                             self.state = self.states["doctypeNotation"]
-                             return True
+                            self.state = self.states["doctypeNotation"]
+                            return True
             # XXX parse error
             self.stream.queue.extend(charStack)
             self.state = self.states["doctypeBogusComment"]
@@ -791,7 +791,7 @@ class XMLTokenizer(object):
             # XXX parse error
             self.state = self.states["data"]
         else:
-            self.currentToken = {"type":"parameterEntity", "name":data,
+            self.currentToken = {"type":"parameterEntity", "name":data,\
               "value":""}
             self.state = self.states["doctypeEntityName"]
         return True
