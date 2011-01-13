@@ -321,7 +321,8 @@ class XMLTokenizer(object):
             # Tokenization ends.
             return False
         else:
-            self.tokenQueue.append({"type":"Characters","data":data})
+            chars = self.stream.charsUntil((u"&", u"<", u"\u0000"))
+            self.tokenQueue.append({"type":"Characters","data":data + chars})
         return True
 
     def tagState(self):

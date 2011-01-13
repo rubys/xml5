@@ -357,7 +357,8 @@ class XMLTokenizer
       # Tokenization ends.
       return false
     else
-      @tokenQueue << {"type" => "Characters", "data" => data}
+      chars = @stream.charsUntil(["&", "<", "\x00"])
+      @tokenQueue << {"type" => "Characters", "data" => data + chars}
     end
     return true
   end
