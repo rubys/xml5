@@ -203,8 +203,6 @@ t.prototype.data_state = function(buffer) {
 		var entity = this.consume_entity(buffer);
 		if(entity) {
 			this.emitToken({type: "Characters", data: entity});
-		} else {
-			buffer.unget(entity);
 		}
 	} else if(c == "<") {
 		this.state = "tag_state";

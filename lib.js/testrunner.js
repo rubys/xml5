@@ -6,6 +6,7 @@ require('./parser.js');
 
 // monkey patch jsdom
 function monkey_patch() {
+  var Attr = jsdom.dom.level3.core.Attr;
   var Element = jsdom.dom.level3.core.Element;
   Element.prototype.__defineGetter__('nodeName', function() {
     // return node name in original case
@@ -17,6 +18,10 @@ function monkey_patch() {
   });
   Element.prototype.__defineGetter__('localName', function() {
     // no localName: https://github.com/tmpvar/jsdom/issues/issue/124
+    return this._nodeName;
+  });
+  Attr.prototype.__defineGetter__('localName', function() {
+    // no localName (similar issue)
     return this._nodeName;
   });
 }
@@ -88,6 +93,7 @@ function printTree(node, indent) {
     break;
 
   case node.TEXT_NODE:
+    tree += '\n| ' + indent + '"' + node.value +  '"'
     break;
 
   case node.DOCUMENT_NODE:

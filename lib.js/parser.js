@@ -38,7 +38,7 @@ Parser.prototype.do_token = function(token) {
 	case 'EmptyTag':
 	case 'StartTag':
 		var child = this.document.createElement(token.name);
-		for(var i in token.attributes) {
+		for(var i=token.attributes.length-1; i>=0; i--) {
 			child.setAttribute(token.attributes[i][0], token.attributes[i][1]);
 		}
 
