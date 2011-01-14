@@ -23,6 +23,7 @@ XML5.Tokenizer = t = function XML5Tokenizer(input, document) {
 	});
 	this.state = 'data_state';
 	this.current_token = null;
+	this.attributeNormalization = [];
 
 	if(input instanceof events.EventEmitter) {
 		source = input;
@@ -211,7 +212,7 @@ t.prototype.data_state = function(buffer) {
 		// Tokenization ends.
 		return false;
 	} else {
-		var chars = buffer.matchUntil("[&<\\u0000]");
+		var chars = buffer.matchUntil("[&<\u0000]");
 		this.emitToken({type: "Characters", data: c + chars});
 	}
 	return true;
@@ -253,7 +254,7 @@ t.prototype.end_tag_state = function(buffer) {
 		// XXX parse error
 		// XXX catch more "incorrect" characters here?
 		this.emitToken({type: "Characters", data: "</"});
-		buffer.queue.insert(0, c);
+		buffer.unget(c);
 		this.state = "data_state";
 	} else {
 		this.current_token = {type: "EndTag", name: c};
@@ -282,13 +283,12 @@ t.prototype.end_tag_name_after_state = function(buffer) {
 	if(c == ">") {
 		this.emit_current_token();
 	} else if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		pass;
+		// pass
 	} else if(c == XML5.EOF) {
 		// XXX parse error
 		this.emit_current_token();
 	} else {
 		// XXX parse error
-		pass;
 	}
 	return true;
 }
@@ -328,7 +328,7 @@ t.prototype.pi_target_state = function(buffer) {
 t.prototype.pi_target_after_state = function(buffer) {
 	var c = buffer.char();
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		pass;
+		// pass
 	} else {
 		buffer.unget(c);
 		this.state = "pi_content_state";
@@ -385,7 +385,9 @@ t.prototype.markup_declaration_state = function(buffer) {
 			}
 		}
 		// XXX parse error
-		buffer.queue.concat(charStack);
+		for(var i=charStack.length-1; i>=0; i--) {
+			if(charStack[i] != XML5.EOF) buffer.unget(charStack[i]);
+		}
 		this.state = "bogus_comment_state";
 	}
 	return true;
@@ -510,7 +512,7 @@ t.prototype.doctype_state = function(buffer) {
 t.prototype.doctype_root_name_before_state = function(buffer) {
 	var c = buffer.char();
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		pass;
+		// pass
 	} else if(c == ">") {
 		this.state = "data_state";
 	} else if(c == XML5.EOF) {
@@ -534,7 +536,7 @@ t.prototype.doctype_root_name_state = function(buffer) {
 		// XXX parse error?
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -553,7 +555,7 @@ t.prototype.doctype_root_name_after_state = function(buffer) {
 		// XXX parse error?
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -566,7 +568,7 @@ t.prototype.doctype_identifier_double_quoted_state = function(buffer) {
 		// XXX parse error?
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -579,7 +581,7 @@ t.prototype.doctype_identifier_single_quoted_state = function(buffer) {
 		// XXX parse error?
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -596,7 +598,7 @@ t.prototype.doctype_internal_subset_state = function(buffer) {
 	} else if(c == "]") {
 		this.state = "doctype_internal_subset_after_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -609,7 +611,7 @@ t.prototype.doctype_internal_subset_after_state = function(buffer) {
 		// XXX parse error
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -675,7 +677,7 @@ t.prototype.doctype_comment_state = function(buffer) {
 		// XXX parse error
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -725,7 +727,7 @@ t.prototype.doctype_entity_state = function(buffer) {
 t.prototype.doctype_entity_type_before_state = function(buffer) {
 	var c = buffer.char();
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		pass;
+		// pass
 	} else if(c == "%") {
 		this.state = "doctype_entity_parameter_before_state";
 	} else if(c == XML5.EOF) {
@@ -754,7 +756,7 @@ t.prototype.doctype_entity_parameter_before_state = function(buffer) {
 t.prototype.doctype_entity_parameter_state = function(buffer) {
 	var c = buffer.char();
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		pass;
+		// pass
 	} else if(c == XML5.EOF) {
 		// XXX parse error
 		this.state = "data_state";
@@ -783,7 +785,7 @@ t.prototype.doctype_entity_name_state = function(buffer) {
 t.prototype.doctype_entity_name_after_state = function(buffer) {
 	var c = buffer.char();
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		pass;
+		// pass
 	} else if(c == "\"") {
 		this.state = "doctype_entity_val_double_quoted_state";
 	} else if(c == "'") {
@@ -835,7 +837,7 @@ t.prototype.doctype_entity_val_single_quoted_state = function(buffer) {
 t.prototype.doctype_entity_val_after_state = function(buffer) {
 	var c = buffer.char();
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		pass;
+		// pass
 	} else if(c == ">") {
 		this.appendEntity();
 	} else if(c == XML5.EOF) {
@@ -843,7 +845,7 @@ t.prototype.doctype_entity_val_after_state = function(buffer) {
 		this.current_token == None;
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -861,7 +863,7 @@ t.prototype.doctype_entity_identifier_state = function(buffer) {
 		this.current_token = None;
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -875,7 +877,7 @@ t.prototype.doctype_entity_identifier_double_quoted_state = function(buffer) {
 		this.current_token = None;
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -889,7 +891,7 @@ t.prototype.doctype_entity_identifier_single_quoted_state = function(buffer) {
 		this.current_token = None;
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -910,7 +912,7 @@ t.prototype.doctype_attlist_state = function(buffer) {
 t.prototype.doctype_attlist_name_before_state = function(buffer) {
 	var c = buffer.char();
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		pass;
+		// pass
 	} else if(c == XML5.EOF) {
 		// XXX parse error
 		this.state = "data_state";
@@ -937,7 +939,7 @@ t.prototype.doctype_attlist_name_state = function(buffer) {
 t.prototype.doctype_attlist_name_after_state = function(buffer) {
 	var c = buffer.char();
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		pass;
+		// pass
 	} else if(c == ">") {
 		this.state = "doctype_internal_subset_state";
 	} else if(c == XML5.EOF) {
@@ -966,7 +968,7 @@ t.prototype.doctype_attlist_attrname_state = function(buffer) {
 t.prototype.doctype_attlist_attrname_after_state = function(buffer) {
 	var c = buffer.char();
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		pass;
+		// pass
 	} else if(c == XML5.EOF) {
 		// XXX parse error
 		this.state = "data_state";
@@ -993,7 +995,7 @@ t.prototype.doctype_attlist_attrtype_state = function(buffer) {
 t.prototype.doctype_attlist_attrtype_after_state = function(buffer) {
 	var c = buffer.char();
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		pass;
+		// pass
 	} else if(c == "#") {
 		this.state = "doctype_attlist_attrdecl_before_state";
 	} else if(c == XML5.EOF) {
@@ -1026,7 +1028,7 @@ t.prototype.doctype_attlist_attrdecl_state = function(buffer) {
 		// XXX parse error
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -1034,7 +1036,7 @@ t.prototype.doctype_attlist_attrdecl_state = function(buffer) {
 t.prototype.doctype_attlist_attrdecl_after_state = function(buffer) {
 	var c = buffer.char();
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		pass;
+		// pass
 	} else if(c == ">") {
 		this.state = "doctype_internal_subset_state";
 	} else if(c == "\"") {
@@ -1105,7 +1107,7 @@ t.prototype.doctype_notation_identifier_state = function(buffer) {
 		// XXX parse error
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -1118,7 +1120,7 @@ t.prototype.doctype_notation_identifier_double_quoted_state = function(buffer) {
 		// XXX parse error
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -1131,7 +1133,7 @@ t.prototype.doctype_notation_identifier_single_quoted_state = function(buffer) {
 		// XXX parse error
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -1144,7 +1146,7 @@ t.prototype.doctype_pi_state = function(buffer) {
 		// XXX parse error
 		this.state = "data_state";
 	} else {
-		pass;
+		// pass
 	}
 	return true;
 }
@@ -1154,7 +1156,7 @@ t.prototype.doctype_pi_after_state = function(buffer) {
 	if(c == ">") {
 		this.state = "doctype_internal_subset_state";
 	} else if(c == "?") {
-		pass;
+		// pass
 	} else if(c == XML5.EOF) {
 		// XXX parse error
 		this.state = "data_state";
@@ -1197,7 +1199,7 @@ t.prototype.empty_tag_state = function(buffer) {
 		this.emit_current_token();
 	} else {
 		// XXX parse error
-		buffer.queue.insert(0, c);
+		buffer.unget(c);
 		this.state = "tag_attribute_name_before_state";
 	}
 	return true;
@@ -1213,7 +1215,6 @@ t.prototype.tag_attribute_name_before_state = function(buffer) {
 		this.state = "empty_tag_state";
 	} else if(c == ":") {
 		// XXX parse error
-		pass;
 	} else if(c == XML5.EOF) {
 		// XXX parse error
 		this.emit_current_token();
@@ -1231,7 +1232,6 @@ t.prototype.tag_attribute_name_state = function(buffer) {
 		this.state = "tag_attribute_value_before_state";
 	} else if(c == ">") {
 		// Token is emitted after attributes are checked.
-		pass;
 	} else if(XML5.SPACE_CHARACTERS_R.test(c)) {
 		this.state = "tag_attribute_name_after_state";
 	} else if(c == "/") {
@@ -1248,10 +1248,10 @@ t.prototype.tag_attribute_name_state = function(buffer) {
 		// Attributes are not dropped at this stage. That happens when the
 		// start tag token is emitted so values can still be safely appended
 		// to attributes, but we do want to report the parse error in time.
-		for(name, value in this.current_token["attributes"].slice(0,-1)) {
-			if(this.current_token["attributes"].last()[0] == name) {
+		var name = this.current_token["attributes"].last()[0];
+		for(var i in this.current_token["attributes"].slice(0,-1)) {
+			if(this.current_token["attributes"][i][0] == name) {
 				// XXX parse error
-				pass;
 			}
 		}
 		if(c == ">") {
@@ -1273,7 +1273,6 @@ t.prototype.tag_attribute_name_after_state = function(buffer) {
 		this.state = "empty_tag_state";
 	} else if(c == ":") {
 		// XXX parse error
-		pass;
 	} else if(c == XML5.EOF) {
 		// XXX parse error
 		this.emit_current_token();
@@ -1323,7 +1322,7 @@ t.prototype.tag_attribute_value_double_quoted_state = function(buffer) {
 		this.emit_current_token();
 	} else {
 		this.current_token["attributes"].last()[1] += c +
-		  buffer.matchUntil("[\\, ]");
+		  buffer.matchUntil('["&]');
 	}
 	return true;
 }

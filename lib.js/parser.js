@@ -35,16 +35,21 @@ Parser.prototype.parse = function(source) {
 
 Parser.prototype.do_token = function(token) {
 	switch(token.type) {
+	case 'EmptyTag':
 	case 'StartTag':
 		var child = this.document.createElement(token.name);
-		for (var i in token.attributes) {
+		for(var i in token.attributes) {
 			child.setAttribute(token.attributes[i][0], token.attributes[i][1]);
 		}
-		this.node = this.node.appendChild(child);
+
+		this.node.appendChild(child);
+
+		if(token.type == 'StartTag') this.node = child;
 		break;
+
 	case 'EndTag':
-		var node = this.node;
-		while(node && node.name.toLowerCase() != token.name.toLowerCase()) {
+		node = this.node;
+		while(node && node.nodeName.toLowerCase() != token.name.toLowerCase()) {
 		      node = node.parentNode;
 		}
 
@@ -54,18 +59,28 @@ Parser.prototype.do_token = function(token) {
 			this.parse_error('unmatched close', token.name);
 		}
 		break;
+
+	case 'EndTagShort':
+		if (this.node != this.document) {
+		      this.node = this.node.parentNode;
+		}
+		break;
+
 	case 'Pi':
 		var pi = this.document.createProcessingInstruction(token.name, token.data);
 		this.node.appendChild(pi);
 		break;
+
 	case 'Comment':
 		var comment = this.document.createComment(token.data);
 		this.node.appendChild(comment);
 		break;
+
 	case 'Characters':
 		var text = this.document.createTextNode(token.data);
 		this.node.appendChild(text);
 		break;
+
 	default:
 		console.log(token);
 		this.parse_error('Unrecognized token type', token.type)
@@ -94,6 +109,7 @@ if(__filename == process.argv[1]) {
 	var jsdom = require('jsdom');
 	var window = jsdom.jsdom(null, null, {parser: HTML5}).createWindow()
 	var parser = new XML5.Parser({document: window.document});
+
 	parser.parse(fs.createReadStream(process.argv[2], {flags: 'r'}));
 	parser.on('end', function() {
 		console.log(window.document.innerHTML);
