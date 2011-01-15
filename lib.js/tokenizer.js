@@ -23,7 +23,20 @@ XML5.Tokenizer = t = function XML5Tokenizer(input, document) {
 	});
 	this.state = 'data_state';
 	this.current_token = null;
+	this.entities = {
+		"lt":"&#60;",
+		"gt":">",
+		"amp":"&#38;",
+		"apos":"'",
+		"quot":"\""
+	}
+	this.parameterEntities = {}
 	this.attributeNormalization = [];
+
+	// Dealing with entities
+	this.entityValueLen = 0;
+	this.charCount = 0;
+	this.entityCount = 0;
 
 	if(input instanceof events.EventEmitter) {
 		source = input;
@@ -73,67 +86,82 @@ t.prototype.emitToken = function(tok) {
 }
 
 t.prototype.consume_entity = function(buffer, from_attr) {
-	var char = null;
-	var chars = buffer.char();
-	if(chars == XML5.EOF) return false;
-	if(chars.match(XML5.SPACE_CHARACTERS) || chars == '<' || chars == '&') {
-		buffer.unget(chars);
-	} else if(chars[0] == '#') { // Maybe a numeric entity
-		var c = buffer.shift(2);
-		chars += c;
-		if(chars[1] && chars[1].toLowerCase() == 'x' && XML5.HEX_DIGITS_R.test(chars[2])) {
-			// Hex entity
-			buffer.unget(chars[2]);
-			char = this.consume_numeric_entity(buffer, true);
-		} else if(chars[1] && XML5.DIGITS_R.test(chars[1])) {
-			// Decimal entity
-			buffer.unget(chars.slice(1));
-			char = this.consume_numeric_entity(buffer, false);
+	// The result of this function is a tuple consisting of the entity
+	// value and whether it needs to be inserted into the stream or
+	// simply appended as character data.
+	var c = buffer.char();
+	if(c == "#") {
+		// Character reference (numeric entity).
+		var value = "&#";
+		c = buffer.char();
+		if(c == "x") {
+			c = buffer.char();
+			if(XML5.HEXDIGITS_R.test(c)) {
+				// Hexadecimal entity detected.
+				buffer.unget(c);
+				value = this.consume_number_entity(true);
+			} else {
+				value += "x";
+			}
+		} else if(XML5.DIGITS_.test(c)) {
+			// Decimal entity detected.
+			buffer.unget(c);
+			value = this.consume_number_entity(false);
+		} else if(c == XML5.EOF) {
+			// XXX parse error
 		} else {
-			// Not numeric
-			buffer.unget(chars);
-			this.parse_error("expected-numeric-entity");
+			// XXX parse error
+			value += c;
 		}
+		return value;
+
+	// Break out if we reach the end of the file
+	} else if(c == XML5.EOF) {
+		// XXX parse error
+		return "&";
+
 	} else {
-		var filteredEntityList = keys(XML5.ENTITIES).filter(function(e) {
-			return e[0] == chars[0];
-		});
-		var entityName = null;
-		while(true) {
-			if(filteredEntityList.some(function(e) {
-				return e.indexOf(chars) == 0;
-			})) {
-				filteredEntityList = filteredEntityList.filter(function(e) {
-					return e.indexOf(chars) == 0;
-				});
-				chars += buffer.char()
-			} else {
-				break;
-			}
+		// Named entity.
+		var end = ";";
+		var name = c + buffer.matchUntil(";");
 
-			if(XML5.ENTITIES[chars]) {
-				entityName = chars;
-				if(entityName[entityName.length - 1] == ';') break;
-			}
+		// Check whether or not the last character returned can be
+		// discarded or needs to be put back.
+		c = buffer.char();
+		if(c != ";") {
+			// XXX parse error
+			end = "";
 		}
 
-		if(entityName) {
-			char = XML5.ENTITIES[entityName];
-
-			if(entityName[entityName.length - 1] != ';' && this.from_attribute && (XML5.ASCII_LETTERS_R.test(chars.substr(entityName.length, 1) || XML5.DIGITS.test(chars.substr(entityName.length, 1))))) {
-				buffer.unget(chars);
-				char = '&';
+		if(this.entities[name]) {
+			if(this.entityCount < 16) {
+				this.entityCount += 1;
+				var value = this.entities[name];
+				if(from_attr) {
+					// This is a hack to make things "work".
+					// Or is it really the only good solution?
+					value = value.replace(/\n/g, "&#10;");
+					value = value.replace(/\r/g, "&#10;");
+					value = value.replace(/\t/g, "&#9;");
+					value = value.replace(/ /g, "&#32;");
+					value = value.replace(/"/g, "&#34;");
+					value = value.replace(/'/g, "&#39;");
+				}
+				this.entityValueLen += value.length;
+				buffer.unget(value);
+				return null;
 			} else {
-				buffer.unget(chars.slice(entityName.length));
+				// XXX parse error
+				return ""
 			}
 		} else {
-			this.parse_error("expected-named-entity");
-			buffer.unget(chars);
+			// XXX parse error
+			return "&" + name + end
 		}
 	}
-
-	return char;
+	// assert 0
 }
+
 
 t.prototype.consume_numeric_entity = function(buffer, hex) {
 	if(hex) {
@@ -177,6 +205,78 @@ t.prototype.consume_numeric_entity = function(buffer, hex) {
 	return char;
 }
 
+t.prototype.consume_number_entity = function(isHex) {
+	var allowed = XML5.DIGITS;
+	var radix = 10;
+	if(isHex) {
+		allowed = XML5.HEX_DIGITS;
+		radix = 16;
+	}
+
+	var char = "\uFFFD";
+
+	// Consume all the characters that are in range while making sure we
+	// don't hit an EOF.
+	var value = this.buffer.matchWhile('^['+allowed+']' /* , true */);
+
+	// Convert the set of characters consumed to an int.
+	var charAsInt = parseInt(value, radix);
+
+	// No NULL characters.
+	// XXX any other characters?
+	if(charAsInt == 0) {
+		charAsInt = 65533;
+	}
+
+	// Convert the int value to an actual char
+	// XXX We should have a separate function that does "int" to
+	// "unicodestring" conversion since this doesn't always work
+	// according to hsivonen. Also, unichr has a limitation of 65535
+	char = String.fromCharCode(charAsInt)
+
+	// Discard the ; if present. Otherwise, put it back on the queue and
+	// invoke parseError on parser.
+	c = this.buffer.char();
+	if(c != ";") {
+		// XXX parse error
+		this.buffer.unget(c);
+	}
+	return char;
+}
+
+t.prototype.consume_number_entity_only = function() {
+	var c = this.buffer.char();
+	var value = "&";
+	if(c == XML5.EOF) {
+		this.buffer.unget(c);
+	} else if(c != "#") {
+		value += c;
+	} else {
+		value += "#";
+		c = this.buffer.char();
+		if(c == "x") {
+			c = this.buffer.char();
+			if(XML5.HEX_DIGITS_R.test(c)) {
+				// Hexadecimal entity detected.
+				this.buffer.unget(c);
+				value = this.consume_number_entity(true);
+			} else {
+				value += "x";
+			}
+		} else if(XML5.DIGITS_R.test(c)) {
+			// Decimal entity detected.
+			this.buffer.unget(c);
+			value = this.consume_number_entity(false);
+		} else if(c == EOF) {
+			// XXX parse error
+		} else {
+			// XXX parse error
+			value += c;
+		}
+	}
+	return value;
+}
+
 t.prototype.process_entity_in_attribute = function(buffer) {
 	var entity = this.consume_entity(buffer);
 	if(entity) {
@@ -196,6 +296,25 @@ t.prototype.process_solidus_in_tag = function(buffer) {
 		return false;
 	}
 }
+
+t.prototype.append_entity = function() {
+	var name = this.current_token.name;
+	var value = this.current_token.value;
+	var type = this.current_token.type;
+	if(type == "entity") {
+		if(!this.entities[name]) {
+			this.entities[name] = value;
+		}
+	} else if(type == "parameterEntity") {
+		if(!this.parameterEntities[name]) {
+			this.parameterEntities[name] = value;
+		}
+	} else {
+		// assert 0
+	}
+	this.state = "doctype_internal_subset_state";
+}
+
 // Below are the various tokenizer states worked out.
 t.prototype.data_state = function(buffer) {
 	var c = buffer.char();
@@ -271,7 +390,7 @@ t.prototype.end_tag_name_state = function(buffer) {
 	} else if(c == ">") {
 		this.emit_current_token();
 	} else {
-		this.current_token["name"] += c;
+		this.current_token.name += c;
 	}
 	return true;
 }
@@ -318,7 +437,7 @@ t.prototype.pi_target_state = function(buffer) {
 	} else if(c == "?") {
 		this.state = "pi_after_state";
 	} else {
-		this.current_token["name"] += c;
+		this.current_token.name += c;
 	}
 	return true;
 }
@@ -772,10 +891,10 @@ t.prototype.doctype_entity_name_state = function(buffer) {
 		this.state = "doctype_entity_name_after_state";
 	} else if(c == XML5.EOF) {
 		// XXX parse error
-		this.current_token = None;
+		this.current_token = null;
 		this.state = "data_state";
 	} else {
-		this.current_token["name"] += c;
+		this.current_token.name += c;
 	}
 	return true;
 }
@@ -790,7 +909,7 @@ t.prototype.doctype_entity_name_after_state = function(buffer) {
 		this.state = "doctype_entity_val_single_quoted_state";
 	} else if(c == XML5.EOF) {
 		// XXX parse error
-		this.current_token == None;
+		this.current_token == null;
 		this.state = "data_state";
 	} else {
 		this.state = "doctype_entity_identifier_state";
@@ -804,13 +923,13 @@ t.prototype.doctype_entity_val_double_quoted_state = function(buffer) {
 	if(c == "\"") {
 		this.state = "doctype_entity_val_after_state";
 	} else if(c == "&") {
-		this.current_token["value"] += this.consumeNumberEntityOnly();
+		this.current_token.value += this.consume_number_entity_only();
 	} else if(c == XML5.EOF) {
 		// XXX parse error
-		this.current_token == None;
+		this.current_token == null;
 		this.state = "data_state";
 	} else {
-		this.current_token["value"] += c;
+		this.current_token.value += c;
 	}
 	return true;
 }
@@ -821,13 +940,13 @@ t.prototype.doctype_entity_val_single_quoted_state = function(buffer) {
 	if(c == "'") {
 		this.state = "doctype_entity_val_after_state";
 	} else if(c == "&") {
-		this.current_token["value"] += this.consumeNumberEntityOnly();
+		this.current_token.value += this.consume_number_entity_only();
 	} else if(c == XML5.EOF) {
 		// XXX parse error
-		this.current_token == None;
+		this.current_token == null;
 		this.state = "data_state";
 	} else {
-		this.current_token["value"] += c;
+		this.current_token.value += c;
 	}
 	return true;
 }
@@ -837,10 +956,10 @@ t.prototype.doctype_entity_val_after_state = function(buffer) {
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
 		// pass
 	} else if(c == ">") {
-		this.appendEntity();
+		this.append_entity();
 	} else if(c == XML5.EOF) {
 		// XXX parse error
-		this.current_token == None;
+		this.current_token == null;
 		this.state = "data_state";
 	} else {
 		// pass
@@ -851,14 +970,14 @@ t.prototype.doctype_entity_val_after_state = function(buffer) {
 t.prototype.doctype_entity_identifier_state = function(buffer) {
 	var c = buffer.char();
 	if(c == ">") {
-		this.appendEntity();
+		this.append_entity();
 	} else if(c == "\"") {
 		this.state = "doctype_entity_identifier_double_quoted_state";
 	} else if(c == "'") {
 		this.state = "doctype_entity_identifier_single_quoted_state";
 	} else if(c == XML5.EOF) {
 		// XXX parse error
-		this.current_token = None;
+		this.current_token = null;
 		this.state = "data_state";
 	} else {
 		// pass
@@ -872,7 +991,7 @@ t.prototype.doctype_entity_identifier_double_quoted_state = function(buffer) {
 		this.state = "doctype_entity_identifier_state";
 	} else if(c == XML5.EOF) {
 		// XXX parse error
-		this.current_token = None;
+		this.current_token = null;
 		this.state = "data_state";
 	} else {
 		// pass
@@ -886,7 +1005,7 @@ t.prototype.doctype_entity_identifier_single_quoted_state = function(buffer) {
 		this.state = "doctype_entity_identifier_state";
 	} else if(c == XML5.EOF) {
 		// XXX parse error
-		this.current_token = None;
+		this.current_token = null;
 		this.state = "data_state";
 	} else {
 		// pass
@@ -1185,7 +1304,7 @@ t.prototype.tag_name_state = function(buffer) {
 	} else if(c == "/") {
 		this.state = "empty_tag_state";
 	} else {
-		this.current_token["name"] += c;
+		this.current_token.name += c;
 	}
 	return true;
 }
@@ -1193,7 +1312,7 @@ t.prototype.tag_name_state = function(buffer) {
 t.prototype.empty_tag_state = function(buffer) {
 	var c = buffer.char();
 	if(c == ">") {
-		this.current_token["type"] = "EmptyTag";
+		this.current_token.type = "EmptyTag";
 		this.emit_current_token();
 	} else {
 		// XXX parse error
@@ -1217,7 +1336,7 @@ t.prototype.tag_attribute_name_before_state = function(buffer) {
 		// XXX parse error
 		this.emit_current_token();
 	} else {
-		this.current_token["attributes"].push([c, ""]);
+		this.current_token.attributes.push([c, ""]);
 		this.state = "tag_attribute_name_state";
 	}
 	return true;
@@ -1239,16 +1358,16 @@ t.prototype.tag_attribute_name_state = function(buffer) {
 		this.emit_current_token();
 		leavingThisState = false;
 	} else {
-		this.current_token["attributes"].last()[0] += c;
+		this.current_token.attributes.last()[0] += c;
 		leavingThisState = false;
 	}
 	if(leavingThisState) {
 		// Attributes are not dropped at this stage. That happens when the
 		// start tag token is emitted so values can still be safely appended
 		// to attributes, but we do want to report the parse error in time.
-		var name = this.current_token["attributes"].last()[0];
-		for(var i in this.current_token["attributes"].slice(0,-1)) {
-			if(this.current_token["attributes"][i][0] == name) {
+		var name = this.current_token.attributes.last()[0];
+		for(var i in this.current_token.attributes.slice(0,-1)) {
+			if(this.current_token.attributes[i][0] == name) {
 				// XXX parse error
 			}
 		}
@@ -1275,7 +1394,7 @@ t.prototype.tag_attribute_name_after_state = function(buffer) {
 		// XXX parse error
 		this.emit_current_token();
 	} else {
-		this.current_token["attributes"].push([c, ""]);
+		this.current_token.attributes.push([c, ""]);
 		this.state = "tag_attribute_name_state";
 	}
 	return true;
@@ -1298,7 +1417,7 @@ t.prototype.tag_attribute_value_before_state = function(buffer) {
 		// XXX parse error
 		this.emit_current_token();
 	} else {
-		this.current_token["attributes"].last()[1] += c;
+		this.current_token.attributes.last()[1] += c;
 		this.state = "tag_attribute_value_unquoted_state";
 	}
 	return true;
@@ -1309,17 +1428,15 @@ t.prototype.tag_attribute_value_double_quoted_state = function(buffer) {
 	if(c == "\"") {
 		this.state = "tag_attribute_name_before_state";
 	} else if(c == "&") {
-		var entity = this.consume_entity(buffer);
+		var entity = this.consume_entity(buffer, true);
 		if(entity) {
-			this.current_token["attributes"].last()[1] += entity;
-		} else {
-			buffer.unget(entity);
+			this.current_token.attributes.last()[1] += entity;
 		}
 	} else if(c == XML5.EOF) {
 		// XXX parse error
 		this.emit_current_token();
 	} else {
-		this.current_token["attributes"].last()[1] += c +
+		this.current_token.attributes.last()[1] += c +
 		  buffer.matchUntil('["&]');
 	}
 	return true;
@@ -1330,17 +1447,15 @@ t.prototype.tag_attribute_value_single_quoted_state = function(buffer) {
 	if(c == "'") {
 		this.state = "tag_attribute_name_before_state";
 	} else if(c == "&") {
-		var entity = this.consume_entity(buffer);
+		var entity = this.consume_entity(buffer, true);
 		if(entity) {
-			this.current_token["attributes"].last()[1] += entity;
-		} else {
-			buffer.unget(entity);
+			this.current_token.attributes.last()[1] += entity;
 		}
 	} else if(c == XML5.EOF) {
 		// XXX parse error
 		this.emit_current_token();
 	} else {
-		this.current_token["attributes"].last()[1] += c +
+		this.current_token.attributes.last()[1] += c +
 		  buffer.matchUntil("['&]");
 	}
 	return true;
@@ -1351,11 +1466,9 @@ t.prototype.tag_attribute_value_unquoted_state = function(buffer) {
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
 		this.state = "tag_attribute_name_before_state";
 	} else if(c == "&") {
-		var entity = this.consume_entity(buffer);
+		var entity = this.consume_entity(buffer, true);
 		if(entity) {
-			this.current_token["attributes"].last()[1] += entity;
-		} else {
-			buffer.unget(entity);
+			this.current_token.attributes.last()[1] += entity;
 		}
 	} else if(c == ">") {
 		this.emit_current_token();
@@ -1363,7 +1476,7 @@ t.prototype.tag_attribute_value_unquoted_state = function(buffer) {
 		// XXX parse error
 		this.emit_current_token();
 	} else {
-		this.current_token["attributes"].last()[1] += c +
+		this.current_token.attributes.last()[1] += c +
 		  buffer.matchUntil("[" + "&><" + XML5.SPACE_CHARACTERS_IN + "]");
 	}
 	return true;

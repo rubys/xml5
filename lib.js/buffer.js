@@ -81,7 +81,13 @@ Buffer.prototype = {
 		return this.data.length - this.start - 1;
 	},
 	unget: function(d) {
-		this.start -= (d.length);
+		if(this.start >= d.length &&
+		  (this.data.slice(this.start-d.length, this.start) == d)) {
+			this.start -= (d.length);
+		} else {
+			var assert = require('assert');
+			assert.fail('unget mismatch', this, this, d);
+		}
 	},
 	undo: function() {
 		this.start = this.committed;
