@@ -1326,7 +1326,7 @@ t.prototype.empty_tag_state = function(buffer) {
 t.prototype.tag_attribute_name_before_state = function(buffer) {
 	var c = buffer.char();
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		buffer.matchUntil(XML5.SPACE_CHARACTERS_IN /*, true */);
+		buffer.matchWhile(XML5.SPACE_CHARACTERS_IN);
 	} else if(c == ">") {
 		this.emit_current_token();
 	} else if(c == "/") {
@@ -1382,7 +1382,7 @@ t.prototype.tag_attribute_name_state = function(buffer) {
 t.prototype.tag_attribute_name_after_state = function(buffer) {
 	var c = buffer.char();
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		buffer.matchUntil(XML5.SPACE_CHARACTERS_IN /*, true */);
+		buffer.matchWhile(XML5.SPACE_CHARACTERS_IN);
 	} else if(c == "=") {
 		this.state = "tag_attribute_value_before_state";
 	} else if(c == ">") {
@@ -1404,7 +1404,7 @@ t.prototype.tag_attribute_name_after_state = function(buffer) {
 t.prototype.tag_attribute_value_before_state = function(buffer) {
 	var c = buffer.char();
 	if(XML5.SPACE_CHARACTERS_R.test(c)) {
-		buffer.matchUntil(XML5.SPACE_CHARACTERS_IN /*, true */);
+		buffer.matchWhile(XML5.SPACE_CHARACTERS_IN);
 	} else if(c == "\"") {
 		this.state = "tag_attribute_value_double_quoted_state";
 	} else if(c == "'") {
