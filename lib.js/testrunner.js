@@ -80,9 +80,17 @@ function printTree(node, indent) {
             (node.prefix||'') + ', ' + (node.localName||'') + ', ' + 
             (node.namespaceURI||'') + ')';
 
+    names = [];
+    values = {}
     for (var i=0; i<node.attributes.length; i++) {
-      var attr = node.attributes[i];
-      tree += '\n|   ' + indent + attr.name + '="' + attr.value + '" (' + 
+      names.push(node.attributes[i].name);
+      values[node.attributes[i].name] = node.attributes[i];
+    }
+    names = names.sort();
+
+    for (var i=0; i<names.length; i++) {
+      var attr = values[names[i]];
+      tree += '\n|   ' + indent + names[i] + '="' + attr.value + '" (' + 
               (attr.prefix||'') + ', ' + (attr.localName||'') + ', ' + 
               (attr.namespaceURI||'') + ')';
     }
