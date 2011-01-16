@@ -17,7 +17,7 @@ XML5.Tokenizer = t = function XML5Tokenizer(input, document) {
 	var state;
 	var buffer = this.buffer = new Buffer();
 	this.__defineSetter__('state', function(newstate) {
-		XML5.debug('tokenizer.state=', newstate)
+		XML5.debug('tokenizer.state=', newstate);
 		state = newstate;
 		buffer.commit();
 	});
@@ -103,7 +103,7 @@ t.prototype.consume_entity = function(buffer, from_attr) {
 			} else {
 				value += "x";
 			}
-		} else if(XML5.DIGITS_.test(c)) {
+		} else if(XML5.DIGITS_R.test(c)) {
 			// Decimal entity detected.
 			buffer.unget(c);
 			value = this.consume_number_entity(false);
@@ -267,7 +267,8 @@ t.prototype.consume_number_entity_only = function() {
 			// Decimal entity detected.
 			this.buffer.unget(c);
 			value = this.consume_number_entity(false);
-		} else if(c == EOF) {
+		} else if(c == XML5.EOF) {
+			// Decimal entity detected.
 			// XXX parse error
 		} else {
 			// XXX parse error
