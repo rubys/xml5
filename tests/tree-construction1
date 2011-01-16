@@ -16,8 +16,8 @@
 #errors
 #document
 | <x:z> (x, z, y)
-|   xmlns:x="y" (xmlns, x, http://www.w3.org/2000/xmlns/)
 |   xml:foo:bar="f" (xml, foo:bar, http://www.w3.org/XML/1998/namespace)
+|   xmlns:x="y" (xmlns, x, http://www.w3.org/2000/xmlns/)
 
 #data
 <xml:foobar/>
@@ -93,8 +93,8 @@ Bogus comment
 #errors
 #document
 | <x> (, x, )
-|   y="x" (, y, )
 |   x="TEST" (, x, )
+|   y="x" (, y, )
 
 #data
 <!DOCTYPE x [
@@ -115,8 +115,8 @@ Bogus comment
 #errors
 #document
 | <x> (, x, )
-|   y="x" (, y, )
 |   x="TEST" (, x, )
+|   y="x" (, y, )
 
 #data
 <!DOCTYPE x [
@@ -238,6 +238,6 @@ Bogus comment
 #errors
 #document
 | <x> (, x, )
+|   x:id="" (x, id, a)
 |   xmlns:x="a" (xmlns, x, http://www.w3.org/2000/xmlns/)
 |   xmlns:y="a" (xmlns, y, http://www.w3.org/2000/xmlns/)
-|   x:id="" (x, id, a)

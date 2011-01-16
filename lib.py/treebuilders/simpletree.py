@@ -94,7 +94,7 @@ class Element(Node):
         tree = '\n|%s<%s> (%s, %s, %s)' % (' '*indent, self.name, self.prefix, self.localname, self.namespace)
         indent += 2
         if self.attributes:
-            for token in self.attributes:
+            for token in sorted(self.attributes, key=lambda token: token["name"]):
                 tree += '\n|%s%s="%s" (%s, %s, %s)' % (' ' * indent, token["name"], token["value"], token["prefix"], token["localname"], token["namespace"])
         for child in self.childNodes:
             tree += child.printTree(indent)

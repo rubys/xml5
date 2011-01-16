@@ -127,7 +127,7 @@ module SimpleTree
         "(#{@prefix}, #{@localname}, #{@namespace})"
       indent += 2
       if @attributes
-        for token in @attributes
+        for token in @attributes.sort_by {|token| token["name"]}
           tree += "\n|#{' ' * indent}#{token["name"]}=\"#{token["value"]}\" " +
             "(#{token["prefix"]}, #{token["localname"]}, #{token["namespace"]})"
         end
