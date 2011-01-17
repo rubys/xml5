@@ -77,8 +77,15 @@ Parser.prototype.do_token = function(token) {
 		break;
 
 	case 'Characters':
-		var text = this.document.createTextNode(token.data);
-		this.node.appendChild(text);
+		var length = this.node.childNodes.length;
+		var last = (length == 0 ? null : this.node.childNodes[length-1]);
+		if(last && last.nodeType==this.node.TEXT_NODE) {
+			var text = this.document.createTextNode(last.value+token.data);
+			this.node.replaceChild(text, last);
+		} else {
+			var text = this.document.createTextNode(token.data);
+			this.node.appendChild(text);
+		}
 		break;
 
 	default:

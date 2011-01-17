@@ -95,8 +95,8 @@ function printTree(node, indent) {
               (attr.namespaceURI||'') + ')';
     }
 
-    for (var i=0; i<node.children.length; i++) {
-      tree += printTree(node.children[i], indent+'  ');
+    for (var i=0; i<node.childNodes.length; i++) {
+      tree += printTree(node.childNodes[i], indent+'  ');
     }
     break;
 
@@ -106,8 +106,10 @@ function printTree(node, indent) {
 
   case node.DOCUMENT_NODE:
     tree = node.nodeName;
-    for(var i=0; i<node.children.length; i++) {
-      tree += printTree(node.children[i], indent);
+    for(var i=0; i<node.childNodes.length; i++) {
+      if(node.childNodes[i].nodeType == node.TEXT_NODE) continue; // XXX Hack
+      tree += printTree(node.childNodes[i], indent);
+      if(node.childNodes[i].nodeType == node.ELEMENT_NODE) break; // XXX Hack
     }
     break;
 

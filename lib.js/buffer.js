@@ -70,9 +70,9 @@ Buffer.prototype = {
 		var r = new RegExp(re + (this.eof ? "|\0" : ""));
 		if(this.queue.length > 0) {
 			if(r.test(this.queue[0])) {
-				var x = this.char() + this.matchUntil(re);
-			} else {
 				return '';
+			} else {
+				return x = this.char() + this.matchUntil(re);
 			}
 		}
 
