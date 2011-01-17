@@ -278,6 +278,24 @@ t.prototype.consume_number_entity_only = function() {
 	return value;
 }
 
+t.prototype.consume_parameter_entity = function() {
+	var name = this.buffer.matchUntil(";");
+	var c = this.buffer.char();
+	if(c != ";") {
+		// XXX parse error
+	}
+
+	if(this.parameterEntities[name] && this.entityCount < 16) {
+		this.entityCount += 1;
+		var value = this.parameterEntities[name];
+		this.entityValueLen += value.length;
+		return value;
+	} else {
+		// XXX parse error
+		return "";
+	}
+}
+
 t.prototype.process_entity_in_attribute = function(buffer) {
 	var entity = this.consume_entity(buffer);
 	if(entity) {
@@ -712,7 +730,7 @@ t.prototype.doctype_internal_subset_state = function(buffer) {
 		// XXX parse error
 		this.state = "data_state";
 	} else if(c == "%") {
-		buffer.queue.concat(this.consumeParameterEntity());
+		buffer.queue.concat(this.consume_parameter_entity());
 	} else if(c == "]") {
 		this.state = "doctype_internal_subset_after_state";
 	} else {
@@ -1497,15 +1515,24 @@ t.prototype.parse_error = function(message) {
 
 t.prototype.emit_current_token = function() {
 	var tok = this.current_token;
-	switch(tok.type) {
-	case 'StartTag':
-	case 'EndTag':
-	case 'EmptyTag':
-		if(tok.type == 'EndTag' && tok.self_closing) {
-			this.parse_error('self-closing-end-tag');
-		}
-		break;
+
+	if(tok.type == 'EndTag' && tok.self_closing) {
+		this.parse_error('self-closing-end-tag');
 	}
+
+	if(tok.type == 'StartTag' || tok.type == 'EmptyTag') {
+		for(var i in this.attributeNormalization) {
+			var norm = this.attributeNormalization[i];
+			if (norm.name = tok.name) {
+				for(var j in norm.attrs) {
+					if(norm.attrs[j].dv != '') {
+						tok.attributes.push([norm.attrs[j].name, norm.attrs[j].dv]);
+					}
+				}
+			}
+		}
+	}
+
 	this.emitToken(tok);
 	this.state = 'data_state';
 }

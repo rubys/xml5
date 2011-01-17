@@ -113,8 +113,12 @@ function printTree(node, indent) {
     }
     break;
 
+  case node.COMMENT_NODE:
+    tree += "\n| " + indent + '<!-- ' + node.value + ' -->'
+    break;
+
   default:
-    console.log('unknown element type:' + node.nodeType);
+    console.log('unknown node type: ' + node.nodeType);
   }
 
   return tree;
