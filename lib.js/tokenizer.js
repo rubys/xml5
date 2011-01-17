@@ -730,7 +730,7 @@ t.prototype.doctype_internal_subset_state = function(buffer) {
 		// XXX parse error
 		this.state = "data_state";
 	} else if(c == "%") {
-		buffer.queue.concat(this.consume_parameter_entity());
+		buffer.unget(this.consume_parameter_entity());
 	} else if(c == "]") {
 		this.state = "doctype_internal_subset_after_state";
 	} else {
