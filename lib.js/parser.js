@@ -33,13 +33,51 @@ Parser.prototype.parse = function(source) {
 	this.tokenizer.tokenize();
 }
 
+Parser.prototype.lookup_namespace = function(prefix, attributes, node) {
+        if(prefix == 'xml') return 'http://www.w3.org/XML/1998/namespace';
+        var name = (prefix == null ? "xmlns" : "xmlns:" + prefix);
+        for(var i=attributes.length-1; i>=0; i--) {
+                if(attributes[i][0] == name) return attributes[i][1];
+        }
+        while(node && node.documentElement) {
+                var value = node.getAttribute(name);
+                if (value) return value.nodeValue;
+                node = node.parentNode;
+        }
+        return null;
+}
+
+Parser.prototype.split_name = function(name) {
+        var sploded = name.split(':');
+        if(sploded.length == 1) {
+                return {prefix: null, name: name};
+        } else if(sploded.length == 2) {
+                return {prefix: sploded[0], name: sploded[1]};
+        } else {
+                return {prefix: sploded.shift(), name: sploded.join(':')};
+        }
+}
+
 Parser.prototype.do_token = function(token) {
 	switch(token.type) {
 	case 'EmptyTag':
 	case 'StartTag':
-		var child = this.document.createElement(token.name);
+                var qname = this.split_name(token.name);
+                var ns = this.lookup_namespace(qname.prefix, token.attributes, this.node);
+                var child;
+		if(qname.prefix) {
+                        child = this.document.createElementNS(ns, qname.name);
+                } else {
+                        child = this.document.createElement(token.name);
+                }
 		for(var i=token.attributes.length-1; i>=0; i--) {
-			child.setAttribute(token.attributes[i][0], token.attributes[i][1]);
+                        var qname = this.split_name(token.attributes[i][0]);
+                        var ns = this.lookup_namespace(qname.prefix, token.attributes, this.node);
+                        if(qname.prefix) {
+			        child.setAttributeNS(ns, token.attributes[i][0], token.attributes[i][1]);
+                        } else {
+			        child.setAttribute(token.attributes[i][0], token.attributes[i][1]);
+                        }
 		}
 
 		this.node.appendChild(child);
@@ -89,7 +127,6 @@ Parser.prototype.do_token = function(token) {
 		break;
 
 	default:
-		console.log(token);
 		this.parse_error('Unrecognized token type', token.type)
 	}
 }
