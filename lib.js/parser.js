@@ -39,7 +39,7 @@ Parser.prototype.lookup_namespace = function(prefix, attributes, node) {
         for(var i=attributes.length-1; i>=0; i--) {
                 if(attributes[i][0] == name) return attributes[i][1];
         }
-        while(node && node.documentElement) {
+        while(node && node.nodeType != node.DOCUMENT_NODE) {
                 var value = node.getAttribute(name);
                 if (value) return value.nodeValue;
                 node = node.parentNode;
