@@ -78,7 +78,7 @@ Parser.prototype.do_token = function(token) {
                         if(qname.prefix) {
 			        var attr = this.document.createAttributeNS(ns, token.attributes[i][0]);
                                 attr.nodeValue = token.attributes[i][1];
-			        child.setAttributeNode(attr);
+			        child.setAttributeNodeNS(attr);
                         } else {
 			        child.setAttribute(token.attributes[i][0], token.attributes[i][1]);
                         }
