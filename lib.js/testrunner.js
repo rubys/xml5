@@ -76,8 +76,14 @@ function printTree(node, indent) {
 
   switch (node.nodeType) {
   case node.ELEMENT_NODE:
-    tree += '\n| ' + indent + '<' + node.nodeName +  '> (' + 
-            (node.prefix||'') + ', ' + (node.localName||'') + ', ' + 
+    var name = node.nodeName;
+    var prefix = node.prefix;
+    if(node._prefix != undefined) { // jsdom HACK
+        prefix = node._prefix;
+        name = prefix + ':' + name;
+    }
+    tree += '\n| ' + indent + '<' + name +  '> (' + 
+            (prefix||'') + ', ' + (node.localName||'') + ', ' + 
             (node.namespaceURI||'') + ')';
 
     names = [];
@@ -90,8 +96,9 @@ function printTree(node, indent) {
 
     for (var i=0; i<names.length; i++) {
       var attr = values[names[i]];
+      // jsdom HACK: _localName
       tree += '\n|   ' + indent + names[i] + '="' + attr.value + '" (' + 
-              (attr.prefix||'') + ', ' + (attr.localName||'') + ', ' + 
+              (attr.prefix||'') + ', ' + (attr._localName||attr.localName||'') + ', ' + 
               (attr.namespaceURI||'') + ')';
     }
 

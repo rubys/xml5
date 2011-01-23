@@ -35,6 +35,7 @@ Parser.prototype.parse = function(source) {
 
 Parser.prototype.lookup_namespace = function(prefix, attributes, node) {
         if(prefix == 'xml') return 'http://www.w3.org/XML/1998/namespace';
+        if(prefix == 'xmlns') return 'http://www.w3.org/2000/xmlns/';
         var name = (prefix == null ? "xmlns" : "xmlns:" + prefix);
         for(var i=attributes.length-1; i>=0; i--) {
                 if(attributes[i][0] == name) return attributes[i][1];
@@ -67,6 +68,7 @@ Parser.prototype.do_token = function(token) {
                 var child;
 		if(qname.prefix) {
                         child = this.document.createElementNS(ns, qname.name);
+                        child._prefix = qname.prefix; // jsdom HACK
                 } else {
                         child = this.document.createElement(token.name);
                 }
@@ -74,7 +76,9 @@ Parser.prototype.do_token = function(token) {
                         var qname = this.split_name(token.attributes[i][0]);
                         var ns = this.lookup_namespace(qname.prefix, token.attributes, this.node);
                         if(qname.prefix) {
-			        child.setAttributeNS(ns, token.attributes[i][0], token.attributes[i][1]);
+			        var attr = this.document.createAttributeNS(ns, token.attributes[i][0]);
+                                attr.nodeValue = token.attributes[i][1];
+			        child.setAttributeNode(attr);
                         } else {
 			        child.setAttribute(token.attributes[i][0], token.attributes[i][1]);
                         }
