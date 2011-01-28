@@ -76,9 +76,19 @@ Parser.prototype.do_token = function(token) {
                         var qname = this.split_name(token.attributes[i][0]);
                         var ns = this.lookup_namespace(qname.prefix, token.attributes, this.node);
                         if(qname.prefix) {
-			        var attr = this.document.createAttributeNS(ns, token.attributes[i][0]);
-                                attr.nodeValue = token.attributes[i][1];
-			        child.setAttributeNodeNS(attr);
+                                try {
+			                var attr = this.document.createAttributeNS(ns, token.attributes[i][0]);
+                                        attr.nodeValue = token.attributes[i][1];
+			                child.setAttributeNodeNS(attr);
+                                 } catch(err) {
+                                        // jsdom HACK
+			                var attr = this.document.createAttribute(token.attributes[i][0]);
+                                        attr.nodeValue = token.attributes[i][1];
+                                        attr._localName = qname.name;
+                                        attr._prefix = qname.prefix;
+                                        attr._namespaceURI = ns;
+			                child.setAttributeNodeNS(attr);
+                                 }
                         } else {
 			        child.setAttribute(token.attributes[i][0], token.attributes[i][1]);
                         }

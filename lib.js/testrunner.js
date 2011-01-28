@@ -8,14 +8,6 @@ require('./parser.js');
 function monkey_patch() {
   var Attr = jsdom.dom.level3.core.Attr;
   var Element = jsdom.dom.level3.core.Element;
-  Element.prototype.__defineGetter__('nodeName', function() {
-    // return node name in original case
-    return this._nodeName;
-  });
-  Element.prototype.__defineGetter__('prefix', function() {
-    // no prefix: https://github.com/tmpvar/jsdom/issues/issue/124
-    return null;
-  });
   Element.prototype.__defineGetter__('localName', function() {
     // no localName: https://github.com/tmpvar/jsdom/issues/issue/124
     return this._nodeName;
@@ -116,7 +108,6 @@ function printTree(node, indent) {
     for(var i=0; i<node.childNodes.length; i++) {
       if(node.childNodes[i].nodeType == node.TEXT_NODE) continue; // XXX Hack
       tree += printTree(node.childNodes[i], indent);
-      if(node.childNodes[i].nodeType == node.ELEMENT_NODE) break; // XXX Hack
     }
     break;
 
