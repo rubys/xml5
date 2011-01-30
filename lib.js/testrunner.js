@@ -70,7 +70,7 @@ function printTree(node, indent) {
   case node.ELEMENT_NODE:
     var name = node.nodeName;
     var prefix = node.prefix;
-    if(node._prefix != undefined) { // jsdom HACK
+    if(node._prefix) { // jsdom HACK
         prefix = node._prefix;
         name = prefix + ':' + name;
     }
