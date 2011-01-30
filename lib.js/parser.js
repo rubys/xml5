@@ -34,63 +34,54 @@ Parser.prototype.parse = function(source) {
 }
 
 Parser.prototype.lookup_namespace = function(prefix, attributes, node) {
-        if(prefix == 'xml') return 'http://www.w3.org/XML/1998/namespace';
-        if(prefix == 'xmlns') return 'http://www.w3.org/2000/xmlns/';
-        var name = (prefix == null ? "xmlns" : "xmlns:" + prefix);
-        for(var i=attributes.length-1; i>=0; i--) {
-                if(attributes[i][0] == name) return attributes[i][1];
-        }
-        while(node && node.nodeType != node.DOCUMENT_NODE) {
-                var value = node.getAttribute(name);
-                if (value) return value.nodeValue;
-                node = node.parentNode;
-        }
-        return null;
+	if(prefix == 'xml') return 'http://www.w3.org/XML/1998/namespace';
+	if(prefix == 'xmlns') return 'http://www.w3.org/2000/xmlns/';
+	var name = (prefix == null ? "xmlns" : "xmlns:" + prefix);
+	for(var i=attributes.length-1; i>=0; i--) {
+		if(attributes[i][0] == name) return attributes[i][1];
+	}
+	while(node && node.nodeType != node.DOCUMENT_NODE) {
+		var value = node.getAttribute(name);
+		if (value) return value.nodeValue;
+		node = node.parentNode;
+	}
+	return null;
 }
 
 Parser.prototype.split_name = function(name) {
-        var sploded = name.split(':');
-        if(sploded.length == 1) {
-                return {prefix: null, name: name};
-        } else if(sploded.length == 2) {
-                return {prefix: sploded[0], name: sploded[1]};
-        } else {
-                return {prefix: sploded.shift(), name: sploded.join(':')};
-        }
+	var sploded = name.split(':');
+	if(sploded.length == 1) {
+		return {prefix: null, name: name};
+	} else if(sploded.length == 2) {
+		return {prefix: sploded[0], name: sploded[1]};
+	} else {
+		return {prefix: sploded.shift(), name: sploded.join(':')};
+	}
 }
 
 Parser.prototype.do_token = function(token) {
 	switch(token.type) {
 	case 'EmptyTag':
 	case 'StartTag':
-                var qname = this.split_name(token.name);
-                var ns = this.lookup_namespace(qname.prefix, token.attributes, this.node);
-                var child;
-		if(qname.prefix) {
-                        child = this.document.createElementNS(ns, token.name);
-                } else {
-                        child = this.document.createElement(token.name);
-                }
+		var qname = this.split_name(token.name);
+		var ns = this.lookup_namespace(qname.prefix, token.attributes, this.node);
+		var child = this.document.createElementNS(ns, token.name);
 		for(var i=token.attributes.length-1; i>=0; i--) {
-                        var qname = this.split_name(token.attributes[i][0]);
-                        var ns = this.lookup_namespace(qname.prefix, token.attributes, this.node);
-                        if(qname.prefix) {
-                                try {
-			                var attr = this.document.createAttributeNS(ns, token.attributes[i][0]);
-                                        attr.nodeValue = token.attributes[i][1];
-			                child.setAttributeNodeNS(attr);
-                                 } catch(err) {
-                                        // jsdom HACK
-			                var attr = this.document.createAttribute(token.attributes[i][0]);
-                                        attr.nodeValue = token.attributes[i][1];
-                                        attr._localName = qname.name;
-                                        attr._prefix = qname.prefix;
-                                        attr._namespaceURI = ns;
-			                child.setAttributeNodeNS(attr);
-                                 }
-                        } else {
-			        child.setAttribute(token.attributes[i][0], token.attributes[i][1]);
-                        }
+			var qname = this.split_name(token.attributes[i][0]);
+			var ns = this.lookup_namespace(qname.prefix, token.attributes, this.node);
+			try {
+				var attr = this.document.createAttributeNS(ns, token.attributes[i][0]);
+				attr.nodeValue = token.attributes[i][1];
+				child.setAttributeNodeNS(attr);
+			 } catch(err) {
+				// jsdom HACK
+				var attr = this.document.createAttribute(token.attributes[i][0]);
+				attr.nodeValue = token.attributes[i][1];
+				attr._localName = qname.name;
+				attr._prefix = qname.prefix;
+				attr._namespaceURI = ns;
+				child.setAttributeNodeNS(attr);
+			 }
 		}
 
 		this.node.appendChild(child);
