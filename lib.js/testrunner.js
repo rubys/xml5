@@ -4,20 +4,6 @@ var jsdom = require('jsdom');
 var XML5 = require('./index.js');
 require('./parser.js');
 
-// monkey patch jsdom
-function monkey_patch() {
-  var Attr = jsdom.dom.level3.core.Attr;
-  var Element = jsdom.dom.level3.core.Element;
-  Element.prototype.__defineGetter__('localName', function() {
-    // no localName: https://github.com/tmpvar/jsdom/issues/issue/124
-    return this._localName || this._nodeName;
-  });
-  Attr.prototype.__defineGetter__('localName', function() {
-    // no localName (similar issue)
-    return this._localName || this._nodeName;
-  });
-}
-
 function runtests(filename) {
   var tests = fs.readFileSync(filename, 'utf-8').split("#data\n");
   for (var i=1; i<tests.length; i++) {
@@ -26,7 +12,6 @@ function runtests(filename) {
       return function(test) {
         var document = new (jsdom.dom.level3.core.Document)();
         var parser = new XML5.Parser({document: document});
-        monkey_patch();
         parser.on('end', function() {
 	  test.equal(testcase.expected, printTree(document, ''),
             testcase.input);
