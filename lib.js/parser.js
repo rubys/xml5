@@ -67,8 +67,7 @@ Parser.prototype.do_token = function(token) {
                 var ns = this.lookup_namespace(qname.prefix, token.attributes, this.node);
                 var child;
 		if(qname.prefix) {
-                        child = this.document.createElementNS(ns, qname.name);
-                        child._prefix = qname.prefix; // jsdom HACK
+                        child = this.document.createElementNS(ns, token.name);
                 } else {
                         child = this.document.createElement(token.name);
                 }

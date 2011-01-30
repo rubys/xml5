@@ -10,11 +10,11 @@ function monkey_patch() {
   var Element = jsdom.dom.level3.core.Element;
   Element.prototype.__defineGetter__('localName', function() {
     // no localName: https://github.com/tmpvar/jsdom/issues/issue/124
-    return this._nodeName;
+    return this._localName || this._nodeName;
   });
   Attr.prototype.__defineGetter__('localName', function() {
     // no localName (similar issue)
-    return this._nodeName;
+    return this._localName || this._nodeName;
   });
 }
 
@@ -68,14 +68,8 @@ function printTree(node, indent) {
 
   switch (node.nodeType) {
   case node.ELEMENT_NODE:
-    var name = node.nodeName;
-    var prefix = node.prefix;
-    if(node._prefix) { // jsdom HACK
-        prefix = node._prefix;
-        name = prefix + ':' + name;
-    }
-    tree += '\n| ' + indent + '<' + name +  '> (' + 
-            (prefix||'') + ', ' + (node.localName||'') + ', ' + 
+    tree += '\n| ' + indent + '<' + node.nodeName +  '> (' + 
+            (node.prefix||'') + ', ' + (node.localName||'') + ', ' + 
             (node.namespaceURI||'') + ')';
 
     names = [];
@@ -88,9 +82,8 @@ function printTree(node, indent) {
 
     for (var i=0; i<names.length; i++) {
       var attr = values[names[i]];
-      // jsdom HACK: _localName
       tree += '\n|   ' + indent + names[i] + '="' + attr.value + '" (' + 
-              (attr.prefix||'') + ', ' + (attr._localName||attr.localName||'') + ', ' + 
+              (attr.prefix||'') + ', ' + (attr.localName||'') + ', ' + 
               (attr.namespaceURI||'') + ')';
     }
 
